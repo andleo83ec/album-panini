@@ -73,7 +73,7 @@ export default function Album() {
   useEffect(() => {
     async function load() {
       try {
-        const r = await window.storage.get("wc2026-collected");
+        const r = await localStorage.get("wc2026-collected");
         if (r?.value) setCollected(JSON.parse(r.value));
       } catch {}
       setLoaded(true);
@@ -82,7 +82,7 @@ export default function Album() {
   }, []);
 
   const saveLocal = useCallback(async (data) => {
-    try { await window.storage.set("wc2026-collected", JSON.stringify(data)); } catch {}
+    try { localStorage.set("wc2026-collected", JSON.stringify(data)); } catch {}
   }, []);
 
   const showToast = (msg, color = "#4ade80") => {
