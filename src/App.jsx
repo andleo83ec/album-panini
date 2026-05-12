@@ -62,18 +62,156 @@ function buildStickerIds() {
 const ALL_STICKERS = buildStickerIds();
 const TOTAL = ALL_STICKERS.length;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PrintOverlay – renders inside the same DOM so iOS Safari can print it via
+// Share → Print.  @media print hides everything else.
+// ─────────────────────────────────────────────────────────────────────────────
+function PrintOverlay({ collected, onClose }) {
+  const collectedCount = Object.values(collected).filter(Boolean).length;
+  const percent = Math.round((collectedCount / TOTAL) * 100);
+  const date = new Date().toLocaleDateString("es-ES", { day:"2-digit", month:"long", year:"numeric" });
+
+  return (
+    <div id="print-root" style={{
+      position:"fixed", inset:0, background:"#fff", zIndex:9999,
+      overflowY:"auto", WebkitOverflowScrolling:"touch",
+      fontFamily:"'Barlow Condensed',Arial,sans-serif", color:"#111", fontSize:11,
+    }}>
+      {/* Toolbar – hidden at print time via .no-print */}
+      <div className="no-print" style={{
+        position:"sticky", top:0, background:"#fff", zIndex:10,
+        borderBottom:"3px solid #b8860b", padding:"10px 16px",
+        display:"flex", justifyContent:"space-between", alignItems:"center",
+        gap:10, flexWrap:"wrap",
+      }}>
+        <div>
+          <div style={{fontFamily:"'Bebas Neue',Arial,sans-serif",fontSize:17,color:"#b8860b",letterSpacing:2,fontWeight:700}}>
+            🖨️ VISTA DE IMPRESIÓN
+          </div>
+          <div style={{fontSize:10,color:"#888",marginTop:2}}>
+            <strong>iPhone / iPad:</strong> toca el ícono de compartir <strong>⎦↑</strong> → <strong>Imprimir</strong>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={() => window.print()} style={{
+            background:"#1a1a3a", border:"1px solid #4040a0", color:"#a0a0ff",
+            borderRadius:7, padding:"8px 14px", fontSize:12,
+            fontFamily:"'Barlow Condensed',Arial,sans-serif", cursor:"pointer", letterSpacing:.5,
+          }}>🖨️ Imprimir / PDF</button>
+          <button onClick={onClose} style={{
+            background:"#2a1010", border:"1px solid #5a2020", color:"#ff8080",
+            borderRadius:7, padding:"8px 14px", fontSize:12,
+            fontFamily:"'Barlow Condensed',Arial,sans-serif", cursor:"pointer", letterSpacing:.5,
+          }}>✕ Cerrar</button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{padding:"16px 20px 40px", maxWidth:860, margin:"0 auto"}}>
+
+        {/* Cover */}
+        <div style={{textAlign:"center",padding:"14px 0 12px",borderBottom:"3px solid #b8860b",marginBottom:14}}>
+          <div style={{fontFamily:"'Bebas Neue',Arial,sans-serif",fontSize:38,letterSpacing:6,color:"#b8860b",lineHeight:1,fontWeight:700}}>
+            ÁLBUM PANINI
+          </div>
+          <div style={{fontSize:12,letterSpacing:3,color:"#666",marginTop:3}}>FIFA WORLD CUP 2026™</div>
+          <div style={{fontSize:9,color:"#aaa",marginTop:4,letterSpacing:1}}>Impreso el {date}</div>
+        </div>
+
+        {/* Global stats */}
+        <div style={{display:"flex",alignItems:"center",gap:12,background:"#f7f4ec",border:"1px solid #e0d0a0",borderRadius:7,padding:"9px 14px",marginBottom:12}}>
+          <div style={{fontFamily:"'Bebas Neue',Arial,sans-serif",fontSize:34,color:"#b8860b",lineHeight:1,fontWeight:700}}>{collectedCount}</div>
+          <div style={{fontSize:10,color:"#555",lineHeight:1.5}}>
+            <strong style={{fontSize:12,color:"#111"}}>de {TOTAL} cromos obtenidos</strong><br/>
+            Progreso total del álbum
+          </div>
+          <div style={{flex:1}}>
+            <div style={{height:8,background:"#e0e0e0",borderRadius:4,overflow:"hidden",marginBottom:3}}>
+              <div style={{height:"100%",width:`${percent}%`,background:"linear-gradient(90deg,#b8860b,#d4a017)",borderRadius:4}}/>
+            </div>
+            <div style={{fontSize:11,color:"#b8860b",fontWeight:700}}>{percent}% completado</div>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div style={{display:"flex",gap:14,marginBottom:10,fontSize:9,color:"#666"}}>
+          <span>
+            <span style={{display:"inline-block",width:10,height:10,background:"#dcfce7",border:"1px solid #86efac",borderRadius:2,verticalAlign:"middle",marginRight:3}}/>
+            Obtenido
+          </span>
+          <span>
+            <span style={{display:"inline-block",width:10,height:10,background:"#f5f5f5",border:"1px solid #ddd",borderRadius:2,verticalAlign:"middle",marginRight:3}}/>
+            Pendiente
+          </span>
+        </div>
+
+        {/* Team blocks */}
+        {TEAMS.map(team => {
+          const stickers = ALL_STICKERS.filter(id => id.startsWith(team.code));
+          const done = stickers.filter(id => collected[id]).length;
+          const pct = Math.round((done / stickers.length) * 100);
+          const barColor = pct===100 ? "#16a34a" : pct>50 ? "#b8860b" : "#2563eb";
+          return (
+            <div key={team.code} style={{
+              pageBreakInside:"avoid", breakInside:"avoid",
+              marginBottom:9, border:"1px solid #e8e0d0", borderRadius:7, overflow:"hidden",
+            }}>
+              <div style={{display:"flex",alignItems:"center",gap:8,background:"#f9f6f0",borderBottom:"1px solid #e8e0d0",padding:"5px 10px"}}>
+                <span style={{fontSize:15}}>{team.flag}</span>
+                <span style={{fontWeight:700,fontSize:12,color:"#222",flex:1}}>{team.name}</span>
+                <span style={{fontSize:9,color:"#999",letterSpacing:1}}>{team.code}</span>
+                <div style={{display:"flex",alignItems:"center",gap:5,minWidth:80}}>
+                  <div style={{flex:1,height:4,background:"#ddd",borderRadius:2,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${pct}%`,background:barColor,borderRadius:2}}/>
+                  </div>
+                  <span style={{fontSize:9,color:"#777",whiteSpace:"nowrap"}}>{done}/{stickers.length}</span>
+                </div>
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:3,padding:"5px 8px",background:"#fff"}}>
+                {stickers.map(id => {
+                  const ok = !!collected[id];
+                  return (
+                    <span key={id} style={{
+                      display:"inline-block", padding:"2px 4px", borderRadius:3,
+                      fontSize:9, fontWeight:600, letterSpacing:.3,
+                      border:`1px solid ${ok?"#86efac":"#ddd"}`,
+                      background:ok?"#dcfce7":"#f5f5f5",
+                      color:ok?"#15803d":"#bbb",
+                      textDecoration:ok?"none":"line-through",
+                    }}>{id}</span>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Footer */}
+        <div style={{marginTop:16,borderTop:"1px solid #e0d0a0",paddingTop:6,display:"flex",justifyContent:"space-between",fontSize:8,color:"#bbb",letterSpacing:.5}}>
+          <span>FIFA WORLD CUP 2026™ · Panini</span>
+          <span>{collectedCount}/{TOTAL} cromos · {percent}%</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Album component
+// ─────────────────────────────────────────────────────────────────────────────
 export default function Album() {
   const [collected, setCollected] = useState({});
   const [search, setSearch]       = useState("");
   const [filterTeam, setFilter]   = useState("ALL");
   const [loaded, setLoaded]       = useState(false);
-  const [toast, setToast]         = useState(null); // { msg, color }
+  const [toast, setToast]         = useState(null);
+  const [showPrint, setShowPrint] = useState(false);
   const importRef = useRef();
 
   useEffect(() => {
     async function load() {
       try {
-        const r = await localStorage.get("wc2026-collected");
+        const r = localstorage.get("wc2026-collected");
         if (r?.value) setCollected(JSON.parse(r.value));
       } catch {}
       setLoaded(true);
@@ -82,7 +220,7 @@ export default function Album() {
   }, []);
 
   const saveLocal = useCallback(async (data) => {
-    try { localStorage.set("wc2026-collected", JSON.stringify(data)); } catch {}
+    try { localstorage.set("wc2026-collected", JSON.stringify(data)); } catch {}
   }, []);
 
   const showToast = (msg, color = "#4ade80") => {
@@ -118,27 +256,19 @@ export default function Album() {
     });
   };
 
-  // ── Export JSON ──
   const handleExport = () => {
     const collectedList = ALL_STICKERS.filter(id => collected[id]);
-    const payload = {
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      total: TOTAL,
-      collected: collectedList.length,
-      stickers: collectedList,
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const payload = { version:1, exportedAt:new Date().toISOString(), total:TOTAL, collected:collectedList.length, stickers:collectedList };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
-    a.href     = url;
+    a.href = url;
     a.download = `album-mundial-2026-${new Date().toLocaleDateString("es-ES").replace(/\//g,"-")}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast("✅ Archivo descargado. Súbelo a Drive manualmente.", "#4ade80");
+    showToast("✅ Archivo descargado.", "#4ade80");
   };
 
-  // ── Import JSON ──
   const handleImport = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -146,23 +276,16 @@ export default function Album() {
     reader.onload = (ev) => {
       try {
         const parsed = JSON.parse(ev.target.result);
-        // Support both formats: {collected: {id:bool}} or {stickers: [id,...]}
         let newCollected = {};
         if (parsed.stickers && Array.isArray(parsed.stickers)) {
           parsed.stickers.forEach(id => (newCollected[id] = true));
         } else if (parsed.collected && typeof parsed.collected === "object" && !Array.isArray(parsed.collected)) {
           newCollected = parsed.collected;
-        } else {
-          showToast("❌ Formato de archivo no reconocido", "#f87171");
-          return;
-        }
+        } else { showToast("❌ Formato no reconocido", "#f87171"); return; }
         setCollected(newCollected);
         saveLocal(newCollected);
-        const count = Object.values(newCollected).filter(Boolean).length;
-        showToast(`✅ Importados ${count} cromos`, "#4ade80");
-      } catch {
-        showToast("❌ Error al leer el archivo", "#f87171");
-      }
+        showToast(`✅ Importados ${Object.values(newCollected).filter(Boolean).length} cromos`, "#4ade80");
+      } catch { showToast("❌ Error al leer el archivo", "#f87171"); }
     };
     reader.readAsText(file);
     e.target.value = "";
@@ -176,7 +299,7 @@ export default function Album() {
 
   if (!loaded) return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center",
-      background:"#0a0f1e", color:"#fff", fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:4 }}>
+      background:"#0a0f1e", color:"#fff", fontFamily:"Arial,sans-serif", fontSize:32, letterSpacing:4 }}>
       CARGANDO...
     </div>
   );
@@ -195,7 +318,18 @@ export default function Album() {
         .ts{animation:fi .25s ease both;}
         @keyframes slideIn{from{opacity:0;transform:translateY(-16px);}to{opacity:1;transform:none;}}
         .toast{animation:slideIn .25s ease both;}
+
+        /* ── @media print: only show the overlay ── */
+        @media print {
+          body > * { display: none !important; }
+          #print-root { display: block !important; position: static !important;
+            overflow: visible !important; z-index: auto !important; }
+          .no-print { display: none !important; }
+        }
       `}</style>
+
+      {/* Print overlay mounted in DOM (required for iOS) */}
+      {showPrint && <PrintOverlay collected={collected} onClose={() => setShowPrint(false)} />}
 
       {/* Toast */}
       {toast && (
@@ -223,14 +357,13 @@ export default function Album() {
         </div>
       </header>
 
-      {/* Export / Import bar */}
+      {/* Export / Import / Print bar */}
       <div style={s.iobar}>
         <div style={s.ioLeft}>
           <span style={s.ioTitle}>💾 Copia de seguridad</span>
           <span style={s.ioHint}>Exporta tu progreso y súbelo a Drive o guárdalo donde quieras</span>
         </div>
         <div style={s.ioRight}>
-          {/* Import hidden input */}
           <input ref={importRef} type="file" accept=".json" style={{display:"none"}} onChange={handleImport} />
           <button className="ab" style={s.iobtn} onClick={() => importRef.current?.click()}>
             📂 Importar JSON
@@ -239,14 +372,20 @@ export default function Album() {
             onClick={handleExport}>
             ⬇️ Exportar JSON
           </button>
+          <button className="ab"
+            style={{...s.iobtn, background:"#1a1a3a", border:"1px solid #3a3a7a", color:"#a0a0ff"}}
+            onClick={() => setShowPrint(true)}>
+            🖨️ Imprimir PDF
+          </button>
         </div>
       </div>
 
-      {/* How-to hint */}
+      {/* Hint bar */}
       <div style={s.hint}>
         <span style={s.hintIcon}>💡</span>
         <span>Para guardar en Drive: exporta el JSON → abre <strong style={{color:"#4285f4"}}>drive.google.com</strong> → arrastra el archivo ahí.</span>
         <span style={{marginLeft:12}}>Para recuperar: descarga el archivo de Drive y usa <strong>Importar JSON</strong>.</span>
+        <span style={{marginLeft:12,color:"#5a5a9a"}}>📱 <strong style={{color:"#8080d0"}}>iPhone:</strong> toca "Imprimir PDF" → ícono compartir <strong>⎦↑</strong> → Imprimir.</span>
       </div>
 
       {/* Controls */}
@@ -342,27 +481,22 @@ const s = {
   pbar:{height:5,background:"#1e2d45",borderRadius:3,overflow:"hidden",margin:"6px 0 3px"},
   pfill:{height:"100%",background:"linear-gradient(90deg,#c8a84b,#f0d080)",borderRadius:3,transition:"width .4s"},
   statP:{fontSize:10,color:"#c8a84b",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:1},
-
   iobar:{background:"#080e1c",borderBottom:"1px solid #1a2a3e",padding:"10px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"},
   ioLeft:{display:"flex",flexDirection:"column",gap:2},
   ioTitle:{fontFamily:"'Barlow Condensed',sans-serif",fontSize:14,letterSpacing:1,color:"#c8a84b",fontWeight:600},
   ioHint:{fontSize:11,color:"#3a4a60",fontFamily:"'Barlow',sans-serif"},
-  ioRight:{display:"flex",gap:8,alignItems:"center"},
+  ioRight:{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"},
   iobtn:{background:"#0d1828",border:"1px solid #1e2d45",color:"#8899bb",borderRadius:7,padding:"7px 14px",fontSize:12,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:.5,cursor:"pointer"},
-
   hint:{background:"#0a1220",borderBottom:"1px solid #131e30",padding:"8px 24px",fontSize:11,color:"#4a5a70",fontFamily:"'Barlow',sans-serif",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"},
   hintIcon:{fontSize:14},
-
   ctrl:{maxWidth:1400,margin:"0 auto",padding:"11px 24px",display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"},
   srch:{flex:1,minWidth:160,background:"#0d1828",border:"2px solid #1e2d45",borderRadius:8,color:"#e8edf5",padding:"8px 13px",fontSize:13,fontFamily:"'Barlow',sans-serif",outline:"none"},
   bdng:{background:"#2a1010",border:"1px solid #5a2020",color:"#ff6b6b",borderRadius:7,padding:"7px 13px",fontSize:12,fontFamily:"'Barlow Condensed',sans-serif",cursor:"pointer"},
   bsuc:{background:"#0d2a1a",border:"1px solid #1a5a30",color:"#4ade80",borderRadius:7,padding:"7px 13px",fontSize:12,fontFamily:"'Barlow Condensed',sans-serif",cursor:"pointer"},
-
   fscr:{display:"flex",gap:7,overflowX:"auto",padding:"0 24px 9px",maxWidth:1400,margin:"0 auto",scrollbarWidth:"none"},
   chip:{flexShrink:0,background:"#0d1828",border:"1.5px solid #1e2d45",color:"#8899bb",borderRadius:20,padding:"4px 11px",fontSize:11,fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:.5,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap",cursor:"pointer"},
   chipA:{background:"#1a2a40",border:"1.5px solid #c8a84b",color:"#c8a84b"},
   badge:{background:"#1e2d45",borderRadius:10,padding:"1px 5px",fontSize:9,color:"#6a8ab0"},
-
   main:{maxWidth:1400,margin:"0 auto",padding:"8px 24px 40px"},
   tsec:{background:"linear-gradient(135deg,#0d1828,#0a1220)",border:"1px solid #1a2a3e",borderRadius:12,padding:"13px 15px",marginBottom:12},
   thdr:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:9,flexWrap:"wrap",gap:7},
@@ -372,11 +506,9 @@ const s = {
   tbfil:{height:"100%",borderRadius:2,transition:"width .3s"},
   tcnt:{fontSize:10,color:"#6a8ab0",fontFamily:"'Barlow Condensed',sans-serif"},
   tbtn:{background:"#1a3a28",border:"1px solid #2a5a40",color:"#4ade80",borderRadius:6,padding:"4px 9px",fontSize:11,fontFamily:"'Barlow Condensed',sans-serif",cursor:"pointer"},
-
   grid:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(64px,1fr))",gap:5},
   sc:{borderRadius:8,padding:"7px 3px 5px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:48,position:"relative",transition:"all .15s"},
   chk:{position:"absolute",top:3,right:4,fontSize:9,color:"#4ade80",fontWeight:700},
   slab:{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,letterSpacing:.5,textAlign:"center"},
-
   foot:{borderTop:"1px solid #1a2a3e",padding:"11px 24px",display:"flex",justifyContent:"space-between",fontSize:10,color:"#3a4a60",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:1,maxWidth:1400,margin:"0 auto"},
 };
