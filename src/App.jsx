@@ -63,137 +63,116 @@ const ALL_STICKERS = buildStickerIds();
 const TOTAL = ALL_STICKERS.length;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PrintOverlay – renders inside the same DOM so iOS Safari can print it via
-// Share → Print.  @media print hides everything else.
+// Generates a self-contained HTML file and downloads it.
+// On iPhone: open the file from Downloads in Safari → Share ⎦↑ → Imprimir
+// On desktop: the file auto-triggers window.print() when opened.
+// This avoids ALL iframe / popup-blocker / @media print iframe issues.
 // ─────────────────────────────────────────────────────────────────────────────
-function PrintOverlay({ collected, onClose }) {
+function downloadPrintHTML(collected) {
   const collectedCount = Object.values(collected).filter(Boolean).length;
   const percent = Math.round((collectedCount / TOTAL) * 100);
   const date = new Date().toLocaleDateString("es-ES", { day:"2-digit", month:"long", year:"numeric" });
 
-  return (
-    <div id="print-root" style={{
-      position:"fixed", inset:0, background:"#fff", zIndex:9999,
-      overflowY:"auto", WebkitOverflowScrolling:"touch",
-      fontFamily:"'Barlow Condensed',Arial,sans-serif", color:"#111", fontSize:11,
-    }}>
-      {/* Toolbar – hidden at print time via .no-print */}
-      <div className="no-print" style={{
-        position:"sticky", top:0, background:"#fff", zIndex:10,
-        borderBottom:"3px solid #b8860b", padding:"10px 16px",
-        display:"flex", justifyContent:"space-between", alignItems:"center",
-        gap:10, flexWrap:"wrap",
-      }}>
-        <div>
-          <div style={{fontFamily:"'Bebas Neue',Arial,sans-serif",fontSize:17,color:"#b8860b",letterSpacing:2,fontWeight:700}}>
-            🖨️ VISTA DE IMPRESIÓN
+  const teamBlocks = TEAMS.map(team => {
+    const stickers = ALL_STICKERS.filter(id => id.startsWith(team.code));
+    const done = stickers.filter(id => collected[id]).length;
+    const pct = Math.round((done / stickers.length) * 100);
+    const barColor = pct === 100 ? "#16a34a" : pct > 50 ? "#b8860b" : "#2563eb";
+    const cells = stickers.map(id => {
+      const ok = !!collected[id];
+      return `<span style="display:inline-block;padding:2px 5px;border-radius:3px;font-size:9px;font-weight:600;letter-spacing:.3px;border:1px solid ${ok ? "#86efac" : "#ddd"};background:${ok ? "#dcfce7" : "#f5f5f5"};color:${ok ? "#15803d" : "#bbb"};${ok ? "" : "text-decoration:line-through;"}">${id}</span>`;
+    }).join(" ");
+
+    return `
+    <div style="break-inside:avoid;page-break-inside:avoid;margin-bottom:10px;border:1px solid #e8e0d0;border-radius:6px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:8px;background:#f9f6f0;border-bottom:1px solid #e8e0d0;padding:5px 10px;">
+        <span style="font-size:15px">${team.flag}</span>
+        <span style="font-weight:700;font-size:12px;color:#222;flex:1">${team.name}</span>
+        <span style="font-size:9px;color:#999;letter-spacing:1px">${team.code}</span>
+        <div style="display:flex;align-items:center;gap:5px;min-width:80px">
+          <div style="flex:1;height:4px;background:#ddd;border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px"></div>
           </div>
-          <div style={{fontSize:10,color:"#888",marginTop:2}}>
-            <strong>iPhone / iPad:</strong> toca el ícono de compartir <strong>⎦↑</strong> → <strong>Imprimir</strong>
-          </div>
-        </div>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={() => window.print()} style={{
-            background:"#1a1a3a", border:"1px solid #4040a0", color:"#a0a0ff",
-            borderRadius:7, padding:"8px 14px", fontSize:12,
-            fontFamily:"'Barlow Condensed',Arial,sans-serif", cursor:"pointer", letterSpacing:.5,
-          }}>🖨️ Imprimir / PDF</button>
-          <button onClick={onClose} style={{
-            background:"#2a1010", border:"1px solid #5a2020", color:"#ff8080",
-            borderRadius:7, padding:"8px 14px", fontSize:12,
-            fontFamily:"'Barlow Condensed',Arial,sans-serif", cursor:"pointer", letterSpacing:.5,
-          }}>✕ Cerrar</button>
+          <span style="font-size:9px;color:#777;white-space:nowrap">${done}/${stickers.length}</span>
         </div>
       </div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;padding:5px 8px;background:#fff">${cells}</div>
+    </div>`;
+  }).join("");
 
-      {/* Content */}
-      <div style={{padding:"16px 20px 40px", maxWidth:860, margin:"0 auto"}}>
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Álbum Panini – FIFA World Cup 2026</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;background:#fff;color:#111;padding:16px 20px 40px;font-size:11px;}
+  @media print{
+    body{padding:8px 12px 20px;}
+    .no-print{display:none!important;}
+  }
+</style>
+</head>
+<body>
 
-        {/* Cover */}
-        <div style={{textAlign:"center",padding:"14px 0 12px",borderBottom:"3px solid #b8860b",marginBottom:14}}>
-          <div style={{fontFamily:"'Bebas Neue',Arial,sans-serif",fontSize:38,letterSpacing:6,color:"#b8860b",lineHeight:1,fontWeight:700}}>
-            ÁLBUM PANINI
-          </div>
-          <div style={{fontSize:12,letterSpacing:3,color:"#666",marginTop:3}}>FIFA WORLD CUP 2026™</div>
-          <div style={{fontSize:9,color:"#aaa",marginTop:4,letterSpacing:1}}>Impreso el {date}</div>
-        </div>
+<!-- Instrucciones – solo visibles en pantalla -->
+<div class="no-print" style="background:#fffbea;border:2px solid #f0c040;border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:12px;color:#555;line-height:1.6">
+  <strong style="color:#b8860b;font-size:14px">🖨️ Cómo imprimir / guardar como PDF</strong><br/>
+  <strong>iPhone / iPad (Safari):</strong> toca el ícono de compartir <strong>⎦↑</strong> → <strong>Imprimir</strong><br/>
+  <strong>Mac / PC:</strong> pulsa <strong>Cmd+P</strong> o <strong>Ctrl+P</strong> → elige «Guardar como PDF»
+</div>
 
-        {/* Global stats */}
-        <div style={{display:"flex",alignItems:"center",gap:12,background:"#f7f4ec",border:"1px solid #e0d0a0",borderRadius:7,padding:"9px 14px",marginBottom:12}}>
-          <div style={{fontFamily:"'Bebas Neue',Arial,sans-serif",fontSize:34,color:"#b8860b",lineHeight:1,fontWeight:700}}>{collectedCount}</div>
-          <div style={{fontSize:10,color:"#555",lineHeight:1.5}}>
-            <strong style={{fontSize:12,color:"#111"}}>de {TOTAL} cromos obtenidos</strong><br/>
-            Progreso total del álbum
-          </div>
-          <div style={{flex:1}}>
-            <div style={{height:8,background:"#e0e0e0",borderRadius:4,overflow:"hidden",marginBottom:3}}>
-              <div style={{height:"100%",width:`${percent}%`,background:"linear-gradient(90deg,#b8860b,#d4a017)",borderRadius:4}}/>
-            </div>
-            <div style={{fontSize:11,color:"#b8860b",fontWeight:700}}>{percent}% completado</div>
-          </div>
-        </div>
+<!-- Portada -->
+<div style="text-align:center;padding:14px 0 12px;border-bottom:3px solid #b8860b;margin-bottom:14px">
+  <div style="font-size:36px;font-weight:900;letter-spacing:6px;color:#b8860b;line-height:1">ÁLBUM PANINI</div>
+  <div style="font-size:12px;letter-spacing:3px;color:#666;margin-top:3px">FIFA WORLD CUP 2026™</div>
+  <div style="font-size:9px;color:#aaa;margin-top:4px;letter-spacing:1px">Impreso el ${date}</div>
+</div>
 
-        {/* Legend */}
-        <div style={{display:"flex",gap:14,marginBottom:10,fontSize:9,color:"#666"}}>
-          <span>
-            <span style={{display:"inline-block",width:10,height:10,background:"#dcfce7",border:"1px solid #86efac",borderRadius:2,verticalAlign:"middle",marginRight:3}}/>
-            Obtenido
-          </span>
-          <span>
-            <span style={{display:"inline-block",width:10,height:10,background:"#f5f5f5",border:"1px solid #ddd",borderRadius:2,verticalAlign:"middle",marginRight:3}}/>
-            Pendiente
-          </span>
-        </div>
-
-        {/* Team blocks */}
-        {TEAMS.map(team => {
-          const stickers = ALL_STICKERS.filter(id => id.startsWith(team.code));
-          const done = stickers.filter(id => collected[id]).length;
-          const pct = Math.round((done / stickers.length) * 100);
-          const barColor = pct===100 ? "#16a34a" : pct>50 ? "#b8860b" : "#2563eb";
-          return (
-            <div key={team.code} style={{
-              pageBreakInside:"avoid", breakInside:"avoid",
-              marginBottom:9, border:"1px solid #e8e0d0", borderRadius:7, overflow:"hidden",
-            }}>
-              <div style={{display:"flex",alignItems:"center",gap:8,background:"#f9f6f0",borderBottom:"1px solid #e8e0d0",padding:"5px 10px"}}>
-                <span style={{fontSize:15}}>{team.flag}</span>
-                <span style={{fontWeight:700,fontSize:12,color:"#222",flex:1}}>{team.name}</span>
-                <span style={{fontSize:9,color:"#999",letterSpacing:1}}>{team.code}</span>
-                <div style={{display:"flex",alignItems:"center",gap:5,minWidth:80}}>
-                  <div style={{flex:1,height:4,background:"#ddd",borderRadius:2,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:`${pct}%`,background:barColor,borderRadius:2}}/>
-                  </div>
-                  <span style={{fontSize:9,color:"#777",whiteSpace:"nowrap"}}>{done}/{stickers.length}</span>
-                </div>
-              </div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:3,padding:"5px 8px",background:"#fff"}}>
-                {stickers.map(id => {
-                  const ok = !!collected[id];
-                  return (
-                    <span key={id} style={{
-                      display:"inline-block", padding:"2px 4px", borderRadius:3,
-                      fontSize:9, fontWeight:600, letterSpacing:.3,
-                      border:`1px solid ${ok?"#86efac":"#ddd"}`,
-                      background:ok?"#dcfce7":"#f5f5f5",
-                      color:ok?"#15803d":"#bbb",
-                      textDecoration:ok?"none":"line-through",
-                    }}>{id}</span>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Footer */}
-        <div style={{marginTop:16,borderTop:"1px solid #e0d0a0",paddingTop:6,display:"flex",justifyContent:"space-between",fontSize:8,color:"#bbb",letterSpacing:.5}}>
-          <span>FIFA WORLD CUP 2026™ · Panini</span>
-          <span>{collectedCount}/{TOTAL} cromos · {percent}%</span>
-        </div>
-      </div>
+<!-- Progreso global -->
+<div style="display:flex;align-items:center;gap:12px;background:#f7f4ec;border:1px solid #e0d0a0;border-radius:7px;padding:9px 14px;margin-bottom:12px">
+  <div style="font-size:32px;font-weight:900;color:#b8860b;line-height:1">${collectedCount}</div>
+  <div style="font-size:10px;color:#555;line-height:1.5">
+    <strong style="font-size:12px;color:#111">de ${TOTAL} cromos obtenidos</strong><br/>
+    Progreso total del álbum
+  </div>
+  <div style="flex:1">
+    <div style="height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden;margin-bottom:3px">
+      <div style="height:100%;width:${percent}%;background:linear-gradient(90deg,#b8860b,#d4a017);border-radius:4px"></div>
     </div>
-  );
+    <div style="font-size:11px;color:#b8860b;font-weight:700">${percent}% completado</div>
+  </div>
+</div>
+
+<!-- Leyenda -->
+<div style="display:flex;gap:14px;margin-bottom:10px;font-size:9px;color:#666">
+  <span><span style="display:inline-block;width:10px;height:10px;background:#dcfce7;border:1px solid #86efac;border-radius:2px;vertical-align:middle;margin-right:3px"></span>Obtenido</span>
+  <span><span style="display:inline-block;width:10px;height:10px;background:#f5f5f5;border:1px solid #ddd;border-radius:2px;vertical-align:middle;margin-right:3px"></span>Pendiente</span>
+</div>
+
+<!-- Equipos -->
+${teamBlocks}
+
+<!-- Pie -->
+<div style="margin-top:16px;border-top:1px solid #e0d0a0;padding-top:6px;display:flex;justify-content:space-between;font-size:8px;color:#bbb;letter-spacing:.5px">
+  <span>FIFA WORLD CUP 2026™ · Panini</span>
+  <span>${collectedCount}/${TOTAL} cromos · ${percent}%</span>
+</div>
+
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `album-panini-2026.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -205,13 +184,12 @@ export default function Album() {
   const [filterTeam, setFilter]   = useState("ALL");
   const [loaded, setLoaded]       = useState(false);
   const [toast, setToast]         = useState(null);
-  const [showPrint, setShowPrint] = useState(false);
   const importRef = useRef();
 
   useEffect(() => {
     async function load() {
       try {
-        const r = localstorage.get("wc2026-collected");
+        const r = localStorage.get("wc2026-collected");
         if (r?.value) setCollected(JSON.parse(r.value));
       } catch {}
       setLoaded(true);
@@ -220,12 +198,12 @@ export default function Album() {
   }, []);
 
   const saveLocal = useCallback(async (data) => {
-    try { localstorage.set("wc2026-collected", JSON.stringify(data)); } catch {}
+    try { localStorage.set("wc2026-collected", JSON.stringify(data)); } catch {}
   }, []);
 
   const showToast = (msg, color = "#4ade80") => {
     setToast({ msg, color });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3500);
   };
 
   const toggle = useCallback((id) => {
@@ -266,7 +244,7 @@ export default function Album() {
     a.download = `album-mundial-2026-${new Date().toLocaleDateString("es-ES").replace(/\//g,"-")}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast("✅ Archivo descargado.", "#4ade80");
+    showToast("✅ Archivo JSON descargado.", "#4ade80");
   };
 
   const handleImport = (e) => {
@@ -318,18 +296,7 @@ export default function Album() {
         .ts{animation:fi .25s ease both;}
         @keyframes slideIn{from{opacity:0;transform:translateY(-16px);}to{opacity:1;transform:none;}}
         .toast{animation:slideIn .25s ease both;}
-
-        /* ── @media print: only show the overlay ── */
-        @media print {
-          body > * { display: none !important; }
-          #print-root { display: block !important; position: static !important;
-            overflow: visible !important; z-index: auto !important; }
-          .no-print { display: none !important; }
-        }
       `}</style>
-
-      {/* Print overlay mounted in DOM (required for iOS) */}
-      {showPrint && <PrintOverlay collected={collected} onClose={() => setShowPrint(false)} />}
 
       {/* Toast */}
       {toast && (
@@ -357,7 +324,7 @@ export default function Album() {
         </div>
       </header>
 
-      {/* Export / Import / Print bar */}
+      {/* Toolbar */}
       <div style={s.iobar}>
         <div style={s.ioLeft}>
           <span style={s.ioTitle}>💾 Copia de seguridad</span>
@@ -374,8 +341,11 @@ export default function Album() {
           </button>
           <button className="ab"
             style={{...s.iobtn, background:"#1a1a3a", border:"1px solid #3a3a7a", color:"#a0a0ff"}}
-            onClick={() => setShowPrint(true)}>
-            🖨️ Imprimir PDF
+            onClick={() => {
+              downloadPrintHTML(collected);
+              showToast("📄 Abre el archivo .html descargado en Safari → Compartir ⎦↑ → Imprimir", "#a0a0ff");
+            }}>
+            🖨️ Descargar para imprimir
           </button>
         </div>
       </div>
@@ -384,8 +354,9 @@ export default function Album() {
       <div style={s.hint}>
         <span style={s.hintIcon}>💡</span>
         <span>Para guardar en Drive: exporta el JSON → abre <strong style={{color:"#4285f4"}}>drive.google.com</strong> → arrastra el archivo ahí.</span>
-        <span style={{marginLeft:12}}>Para recuperar: descarga el archivo de Drive y usa <strong>Importar JSON</strong>.</span>
-        <span style={{marginLeft:12,color:"#5a5a9a"}}>📱 <strong style={{color:"#8080d0"}}>iPhone:</strong> toca "Imprimir PDF" → ícono compartir <strong>⎦↑</strong> → Imprimir.</span>
+        <span style={{marginLeft:12,color:"#5a5a9a"}}>
+          📱 <strong style={{color:"#8080d0"}}>iPhone:</strong> descarga el HTML → ábrelo en Safari → ícono compartir <strong>⎦↑</strong> → <strong>Imprimir</strong>.
+        </span>
       </div>
 
       {/* Controls */}
@@ -511,4 +482,3 @@ const s = {
   chk:{position:"absolute",top:3,right:4,fontSize:9,color:"#4ade80",fontWeight:700},
   slab:{fontFamily:"'Barlow Condensed',sans-serif",fontSize:11,letterSpacing:.5,textAlign:"center"},
   foot:{borderTop:"1px solid #1a2a3e",padding:"11px 24px",display:"flex",justifyContent:"space-between",fontSize:10,color:"#3a4a60",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:1,maxWidth:1400,margin:"0 auto"},
-};
