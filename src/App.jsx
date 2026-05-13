@@ -199,7 +199,36 @@ function PrintOverlay({ collected, onClose }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Album component
 // ─────────────────────────────────────────────────────────────────────────────
-export default function Album() {
+function downloadPrintHTML(collected) {
+  const collectedCount = Object.values(collected).filter(Boolean).length;
+  const percent = Math.round((collectedCount / TOTAL) * 100);
+  const date = new Date().toLocaleDateString("es-ES");
+  const rows = TEAMS.map(team => {
+    const stickers = ALL_STICKERS.filter(id => id.startsWith(team.code));
+    const done = stickers.filter(id => collected[id]).length;
+    const pct = Math.round((done / stickers.length) * 100);
+    const bc = pct === 100 ? "#16a34a" : pct > 50 ? "#b8860b" : "#2563eb";
+    const cells = stickers.map(id => {
+      const ok = !!collected[id];
+      const bg = ok ? "#dcfce7" : "#f5f5f5";
+      const cl = ok ? "#15803d" : "#bbb";
+      const bd = ok ? "#86efac" : "#ddd";
+      const td = ok ? "" : "text-decoration:line-through";
+      return `<span style="display:inline-block;padding:2px 5px;border-radius:3px;font-size:9px;font-weight:600;border:1px solid ${bd};background:${bg};color:${cl};${td}">${id}</span>`;
+    }).join(" ");
+    return `<div style="break-inside:avoid;margin-bottom:8px;border:1px solid #e8e0d0;border-radius:6px;overflow:hidden"><div style="display:flex;align-items:center;gap:8px;background:#f9f6f0;border-bottom:1px solid #e8e0d0;padding:5px 10px"><span>${team.flag}</span><span style="font-weight:700;font-size:12px;flex:1">${team.name}</span><span style="font-size:9px;color:#999">${team.code} ${done}/${stickers.length}</span></div><div style="display:flex;flex-wrap:wrap;gap:3px;padding:5px 8px">${cells}</div></div>`;
+  }).join("");
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Album Panini 2026</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;padding:16px;font-size:11px}@media print{.np{display:none!important}}</style></head><body><div class="np" style="background:#fffbea;border:2px solid #f0c040;border-radius:8px;padding:12px;margin-bottom:16px"><strong>Como imprimir:</strong> iPhone: Safari boton compartir &gt; Imprimir. PC: Ctrl+P.</div><div style="text-align:center;padding:12px 0;border-bottom:3px solid #b8860b;margin-bottom:12px"><div style="font-size:28px;font-weight:900;letter-spacing:4px;color:#b8860b">ALBUM PANINI</div><div style="font-size:10px;letter-spacing:2px;color:#666">FIFA WORLD CUP 2026 - ${date}</div></div><div style="display:flex;gap:12px;background:#f7f4ec;border:1px solid #e0d0a0;border-radius:7px;padding:8px 12px;margin-bottom:10px;align-items:center"><div style="font-size:28px;font-weight:900;color:#b8860b">${collectedCount}</div><div style="font-size:10px;color:#555"><strong>de ${TOTAL} cromos</strong><br/>${percent}% completado</div></div>${rows}</body></html>`;
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "album-panini-2026.html";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}export default function Album() {
   const [collected, setCollected] = useState({});
   const [search, setSearch]       = useState("");
   const [filterTeam, setFilter]   = useState("ALL");
@@ -372,10 +401,9 @@ export default function Album() {
             onClick={handleExport}>
             ⬇️ Exportar JSON
           </button>
-          <button className="ab"
-            style={{...s.iobtn, background:"#1a1a3a", border:"1px solid #3a3a7a", color:"#a0a0ff"}}
-            onClick={() => setShowPrint(true)}>
-            🖨️ Imprimir PDF
+          <button className="ab" style={{...s.iobtn, background:"#1a1a3a", border:"1px solid #3a3a7a", color:"#a0a0ff"}}
+            onClick={() => { downloadPrintHTML(collected); showToast("Abre el .html en Safari > Compartir > Imprimir", "#a0a0ff"); }}>
+            Descargar para imprimir
           </button>
         </div>
       </div>
