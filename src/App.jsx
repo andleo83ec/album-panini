@@ -199,7 +199,7 @@ const importRef = useRef();
 useEffect(() => {
 async function load() {
 try {
-const r = await window.storage.get(“wc2026-collected”);
+const r = loc.get(“wc2026-collected”);
 if (r?.value) setCollected(JSON.parse(r.value));
 } catch {}
 setLoaded(true);
@@ -208,7 +208,7 @@ load();
 }, []);
 
 const saveLocal = useCallback(async (data) => {
-try { await window.storage.set(“wc2026-collected”, JSON.stringify(data)); } catch {}
+try { LocalStorage.set(“wc2026-collected”, JSON.stringify(data)); } catch {}
 }, []);
 
 const showToast = (msg, color = “#4ade80”) => {
